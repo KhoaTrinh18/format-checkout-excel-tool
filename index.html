@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Checkout Excel Tool</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      }
+
+      body {
+        background: #f4f6f8;
+        min-height: 100vh;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .container {
+        background: #ffffff;
+        width: 420px;
+        padding: 24px 28px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      }
+
+      .title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #222;
+      }
+
+      .subtitle {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 20px;
+      }
+
+      .file-input {
+        display: block;
+        border: 2px dashed #d0d7de;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.2s;
+      }
+
+      .file-input:hover {
+        border-color: #4f46e5;
+      }
+
+      .file-input input {
+        display: none;
+      }
+
+      .file-label {
+        font-size: 14px;
+        color: #444;
+      }
+
+      .actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 12px;
+      }
+
+      button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .btn-export {
+        background: #4f46e5;
+        color: #fff;
+      }
+
+      .btn-export:hover {
+        background: #4338ca;
+      }
+
+      .btn-clear {
+        background: #e5e7eb;
+        color: #333;
+      }
+
+      .btn-clear:hover {
+        background: #d1d5db;
+      }
+
+      .footer {
+        margin-top: 18px;
+        font-size: 12px;
+        color: #999;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="title">Format Checkout Excel Tool</div>
+      <div class="subtitle">
+        Upload file checkout and export for correct format
+      </div>
+
+      <label class="file-input" for="file">
+        <input type="file" id="file" accept=".xlsx,.xls" />
+        <div class="file-label" id="fileLabel">
+          📄 Upload File Excel (.xlsx / .xls)
+        </div>
+      </label>
+
+      <div class="actions">
+        <button class="btn-clear" onclick="clearFile()">Delete</button>
+        <button class="btn-export" onclick="exportExcel()">Export</button>
+      </div>
+
+      <div class="footer">Internal tool · Excel Checkout</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="script.js"></script>
+
+    <script>
+      function clearFile() {
+        document.getElementById("file").value = "";
+        document.getElementById("fileLabel").textContent =
+          "📄 Upload File Excel (.xlsx / .xls)";
+      }
+
+      const fileInput = document.getElementById("file");
+      const fileLabel = document.getElementById("fileLabel");
+
+      fileInput.addEventListener("change", () => {
+        if (fileInput.files.length > 0) {
+          const fileName = fileInput.files[0].name;
+          fileLabel.textContent = `📄 ${fileName}`;
+        } else {
+          fileLabel.textContent = "📄 Upload File Excel (.xlsx / .xls)";
+        }
+      });
+    </script>
+  </body>
+</html>
