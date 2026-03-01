@@ -51,7 +51,7 @@ async function exportExcel() {
       const addr = "B" + (index + 1);
       worksheet[addr].s = {
         font: {
-          sz: 14,
+          sz: 20,
           bold: true,
         },
         alignment: {
@@ -68,10 +68,16 @@ async function exportExcel() {
       const rowEnd = index - 1;
 
       if (rowEnd > rowStart && rowStart !== null) {
-        worksheet["!merges"].push({
-          s: { r: rowStart, c: 0 },
-          e: { r: rowEnd, c: 0 },
-        });
+        worksheet["!merges"].push(
+          {
+            s: { r: rowStart, c: 0 },
+            e: { r: rowEnd, c: 0 },
+          },
+          {
+            s: { r: rowStart, c: 3 },
+            e: { r: rowEnd, c: 3 },
+          },
+        );
       }
 
       worksheet["!merges"].push({
@@ -127,7 +133,6 @@ function formatDefaultWorksheet(worksheet) {
       ...cell.s,
       font: {
         sz: 12,
-        bold: true,
       },
       alignment: {
         horizontal: "center",
