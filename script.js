@@ -20,6 +20,7 @@ async function exportExcel() {
 
   const rows = buildExcelRows(confirmList);
   const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  formatDefaultWorksheet(worksheet);
 
   worksheet["!merges"] = [
     {
@@ -28,16 +29,83 @@ async function exportExcel() {
     },
   ];
 
+  const titleCell = worksheet["A1"];
+
+  titleCell.s = {
+    font: {
+      bold: true,
+      sz: 20,
+    },
+    alignment: {
+      horizontal: "center",
+      vertical: "center",
+    },
+  };
+
+  var rowStart = null;
+  rows.forEach((row, index) => {
+    if (index <= 1) return;
+
+    if (row[0] === "") {
+      // Format room number
+      const addr = "B" + (index + 1);
+      worksheet[addr].s = {
+        font: {
+          sz: 14,
+          bold: true,
+        },
+        alignment: {
+          horizontal: "center",
+          vertical: "center",
+        },
+      };
+
+      if (rowStart === null) rowStart = index;
+      return;
+    }
+
+    if (row[0] !== "") {
+      const rowEnd = index - 1;
+
+      if (rowEnd > rowStart && rowStart !== null) {
+        worksheet["!merges"].push({
+          s: { r: rowStart, c: 0 },
+          e: { r: rowEnd, c: 0 },
+        });
+      }
+
+      worksheet["!merges"].push({
+        s: { r: index, c: 2 },
+        e: { r: index, c: 5 },
+      });
+
+      rowStart = null;
+    }
+  });
+
   worksheet["!rows"] = rows.map((row, index) => {
     const roomCell = row[1];
 
-    if (roomCell && !isNaN(roomCell) && row[0] == "") {
+    if (index === 0) {
+      return { hpt: 60 };
+    }
+
+    if (roomCell && !isNaN(roomCell) && row[0] === "") {
       return { hpt: 50 };
     }
 
     return { hpt: 20 };
   });
+  worksheet["!cols"] = [
+    { wch: 20 },
+    { wch: 12 },
+    { wch: 7 },
+    { wch: 12 },
+    { wch: 20 },
+    { wch: 12 },
+  ];
 
+  addBorderAllCells(worksheet);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
@@ -45,6 +113,47 @@ async function exportExcel() {
   const filename = `CHECKOUT_${today.replace(/\//g, "-")}.xlsx`;
 
   XLSX.writeFile(workbook, filename);
+}
+
+function formatDefaultWorksheet(worksheet) {
+  Object.keys(worksheet).forEach((cellAddress) => {
+    if (cellAddress.startsWith("!")) return;
+
+    const cell = worksheet[cellAddress];
+    if (!cell || cell.v === undefined) return;
+
+    cell.s = cell.s || {};
+    cell.s = {
+      ...cell.s,
+      font: {
+        sz: 12,
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center",
+      },
+    };
+  });
+}
+
+function addBorderAllCells(worksheet) {
+  const borderStyle = {
+    top: { style: "thin" },
+    bottom: { style: "thin" },
+    left: { style: "thin" },
+    right: { style: "thin" },
+  };
+
+  Object.keys(worksheet).forEach((cellAddress) => {
+    if (cellAddress.startsWith("!")) return;
+
+    const cell = worksheet[cellAddress];
+    if (!cell || cell.v === undefined) return;
+
+    cell.s = cell.s || {};
+    cell.s.border = borderStyle;
+  });
 }
 
 function convertToComfirmList() {
