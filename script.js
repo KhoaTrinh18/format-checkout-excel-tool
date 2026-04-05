@@ -10,61 +10,154 @@ class Confirm {
   }
 }
 
-async function exportExcel() {
-  const confirmList = await convertToComfirmList();
+function resetSelectedFile() {
+  const fileInput = document.getElementById("file");
+  const fileLabel = document.getElementById("fileLabel");
 
-  if (!confirmList || confirmList.length === 0) {
-    alert("File chưa có dữ liệu để xuất");
-    return;
+  if (fileInput) {
+    fileInput.value = "";
   }
 
-  const rows = buildExcelRows(confirmList);
-  const worksheet = XLSX.utils.aoa_to_sheet(rows);
-  formatDefaultWorksheet(worksheet);
+  if (fileLabel) {
+    fileLabel.textContent = "📄 Upload File Excel (.xlsx / .xls)";
+  }
+}
 
-  worksheet["!merges"] = [
-    {
-      s: { r: 0, c: 0 },
-      e: { r: 0, c: 5 },
-    },
-  ];
+let activeAlertResolver = null;
+let lastFocusedElement = null;
 
-  const titleCell = worksheet["A1"];
+function hideAlertModal() {
+  const modal = document.getElementById("alertModal");
 
-  titleCell.s = {
-    font: {
-      bold: true,
-      sz: 20,
-    },
-    alignment: {
-      horizontal: "center",
-      vertical: "center",
-    },
-  };
+  if (!modal) return;
 
-  var rowStart = null;
-  rows.forEach((row, index) => {
-    if (index <= 1) return;
+  modal.classList.remove("is-visible");
+  modal.setAttribute("aria-hidden", "true");
 
-    if (row[0] === "") {
-      // Format room number
-      const addr = "B" + (index + 1);
-      worksheet[addr].s = {
-        font: {
-          sz: 20,
-          bold: true,
-        },
-        alignment: {
-          horizontal: "center",
-          vertical: "center",
-        },
-      };
+  if (activeAlertResolver) {
+    const resolve = activeAlertResolver;
+    activeAlertResolver = null;
+    resolve();
+  }
 
-      if (rowStart === null) rowStart = index;
+  if (lastFocusedElement && typeof lastFocusedElement.focus === "function") {
+    lastFocusedElement.focus();
+    lastFocusedElement = null;
+  }
+}
+
+function showAlertModal(message, title = "Alert", variant = "error") {
+  const modal = document.getElementById("alertModal");
+  const cardElement = document.getElementById("alertCard");
+  const iconElement = document.getElementById("alertModalIcon");
+  const titleElement = document.getElementById("alertModalTitle");
+  const messageElement = document.getElementById("alertModalMessage");
+  const buttonElement = document.getElementById("alertModalButton");
+
+  if (
+    !modal ||
+    !cardElement ||
+    !iconElement ||
+    !titleElement ||
+    !messageElement ||
+    !buttonElement
+  ) {
+    return Promise.resolve();
+  }
+
+  if (activeAlertResolver) {
+    activeAlertResolver();
+    activeAlertResolver = null;
+  }
+
+  lastFocusedElement = document.activeElement;
+  cardElement.dataset.state = variant;
+  iconElement.textContent = variant === "success" ? "✓" : "!";
+  titleElement.textContent = title;
+  messageElement.textContent = message;
+  modal.classList.add("is-visible");
+  modal.setAttribute("aria-hidden", "false");
+
+  buttonElement.focus();
+
+  return new Promise((resolve) => {
+    activeAlertResolver = resolve;
+  });
+}
+
+document.addEventListener("click", (event) => {
+  const modal = document.getElementById("alertModal");
+
+  if (modal && event.target === modal) {
+    hideAlertModal();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    hideAlertModal();
+  }
+});
+
+async function exportExcel() {
+  try {
+    const confirmList = await convertToComfirmList();
+
+    if (!confirmList || confirmList.length === 0) {
+      await showAlertModal(
+        "The selected file contains invalid data.",
+        "Invalid Data",
+      );
+      resetSelectedFile();
       return;
     }
 
-    if (row[0] !== "") {
+    const rows = buildExcelRows(confirmList);
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    formatDefaultWorksheet(worksheet);
+
+    worksheet["!merges"] = [
+      {
+        s: { r: 0, c: 0 },
+        e: { r: 0, c: 5 },
+      },
+    ];
+
+    const titleCell = worksheet["A1"];
+
+    titleCell.s = {
+      font: {
+        bold: true,
+        sz: 20,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center",
+      },
+    };
+
+    let rowStart = null;
+    rows.forEach((row, index) => {
+      if (index <= 1) return;
+
+      if (row[0] === "") {
+        // Format room number
+        const addr = "B" + (index + 1);
+        worksheet[addr].s = {
+          font: {
+            sz: 20,
+            bold: true,
+          },
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+          },
+        };
+
+        if (rowStart === null) rowStart = index;
+        return;
+      }
+
       const rowEnd = index - 1;
 
       if (rowEnd > rowStart && rowStart !== null) {
@@ -86,39 +179,60 @@ async function exportExcel() {
       });
 
       rowStart = null;
+    });
+
+    worksheet["!rows"] = rows.map((row, index) => {
+      const roomCell = row[1];
+
+      if (index === 0) {
+        return { hpt: 60 };
+      }
+
+      if (roomCell && !isNaN(roomCell) && row[0] === "") {
+        return { hpt: 45 };
+      }
+
+      return { hpt: 20 };
+    });
+
+    worksheet["!cols"] = [
+      { wch: 20 },
+      { wch: 12 },
+      { wch: 7 },
+      { wch: 12 },
+      { wch: 20 },
+      { wch: 12 },
+    ];
+
+    addBorderAllCells(worksheet);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+    const today = getTodayDDMMYYYY();
+    const filename = `CHECKOUT_${today.replace(/\//g, "-")}.xlsx`;
+
+    XLSX.writeFile(workbook, filename);
+    await showAlertModal(
+      `Saved ${filename} successfully.`,
+      "Export complete",
+      "success",
+    );
+    resetSelectedFile();
+  } catch (error) {
+    if (error?.silent) {
+      await showAlertModal(
+        error.message || "Something went wrong.",
+        error.title || "Alert",
+      );
+      return;
     }
-  });
 
-  worksheet["!rows"] = rows.map((row, index) => {
-    const roomCell = row[1];
-
-    if (index === 0) {
-      return { hpt: 60 };
-    }
-
-    if (roomCell && !isNaN(roomCell) && row[0] === "") {
-      return { hpt: 45 };
-    }
-
-    return { hpt: 20 };
-  });
-  worksheet["!cols"] = [
-    { wch: 20 },
-    { wch: 12 },
-    { wch: 7 },
-    { wch: 12 },
-    { wch: 20 },
-    { wch: 12 },
-  ];
-
-  addBorderAllCells(worksheet);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-
-  const today = getTodayDDMMYYYY();
-  const filename = `CHECKOUT_${today.replace(/\//g, "-")}.xlsx`;
-
-  XLSX.writeFile(workbook, filename);
+    console.error(error);
+    await showAlertModal(
+      "The Excel file could not be processed. Please check the file and try again.",
+      "Export failed",
+    );
+  }
 }
 
 function formatDefaultWorksheet(worksheet) {
@@ -164,32 +278,43 @@ function addBorderAllCells(worksheet) {
 function convertToComfirmList() {
   return new Promise((resolve, reject) => {
     const file = document.getElementById("file").files[0];
+
     if (!file) {
-      alert("Hãy chon file trước khi xuất");
-      return reject("No file");
+      reject({
+        silent: true,
+        title: "No file selected",
+        message: "Please choose an Excel file before exporting.",
+      });
+      return;
     }
 
     const reader = new FileReader();
 
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          defval: "",
+        });
 
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, {
-        header: 1,
-        defval: "",
-      });
+        const confirmList = sortConfirms(parseConfirms(rows));
 
-      const confirmList = sortConfirms(parseConfirms(rows));
+        console.log("Total confirms:", confirmList.length);
+        confirmList.forEach((confirm) => confirm.log());
 
-      console.log("Total confirms:", confirmList.length);
-      confirmList.forEach((c) => c.log());
-
-      resolve(confirmList);
+        resolve(confirmList);
+      } catch (error) {
+        reject(error);
+      }
     };
 
-    reader.onerror = reject;
+    reader.onerror = () => {
+      reject(new Error("Failed to read the selected file."));
+    };
+
     reader.readAsArrayBuffer(file);
   });
 }
@@ -222,7 +347,7 @@ function parseConfirms(rows) {
 
   if (current) confirms.push(current);
 
-  return confirms.map((c) => new Confirm(c));
+  return confirms.map((confirm) => new Confirm(confirm));
 }
 
 function sortConfirms(confirmList) {
@@ -235,11 +360,9 @@ function sortConfirms(confirmList) {
 
 function buildExcelRows(confirmList) {
   const rows = [];
-
   const today = getTodayDDMMYYYY();
 
   rows.push(["CHECK OUT LIST NGÀY " + today, "", "", "", "", ""]);
-
   rows.push(["BK.No", "Room", "Key", "R/C", "Minibar", "Other"]);
 
   confirmList.forEach((confirm) => {
