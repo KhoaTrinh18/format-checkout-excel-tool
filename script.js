@@ -208,7 +208,7 @@ async function exportExcel() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
-    const today = getTodayDDMMYYYY();
+    const today = getTomorrowDDMMYYYY();
     const filename = `CHECKOUT_${today.replace(/\//g, "-")}.xlsx`;
 
     XLSX.writeFile(workbook, filename);
@@ -360,7 +360,7 @@ function sortConfirms(confirmList) {
 
 function buildExcelRows(confirmList) {
   const rows = [];
-  const today = getTodayDDMMYYYY();
+  const today = getTomorrowDDMMYYYY();
 
   rows.push(["CHECK OUT LIST NGÀY " + today, "", "", "", "", ""]);
   rows.push(["BK.No", "Room", "Key", "R/C", "Minibar", "Other"]);
@@ -376,8 +376,9 @@ function buildExcelRows(confirmList) {
   return rows;
 }
 
-function getTodayDDMMYYYY() {
+function getTomorrowDDMMYYYY() {
   const now = new Date();
+  now.setDate(now.getDate() + 1);
   const d = String(now.getDate()).padStart(2, "0");
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const y = now.getFullYear();
