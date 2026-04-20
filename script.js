@@ -189,10 +189,10 @@ async function exportExcel() {
       }
 
       if (roomCell && !isNaN(roomCell) && row[0] === "") {
-        return { hpt: 45 };
+        return { hpt: 50 };
       }
 
-      return { hpt: 20 };
+      return { hpt: 15 };
     });
 
     worksheet["!cols"] = [
