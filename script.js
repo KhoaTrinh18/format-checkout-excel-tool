@@ -185,7 +185,7 @@ async function exportExcel() {
       const roomCell = row[1];
 
       if (index === 0) {
-        return { hpt: 60 };
+        return { hpt: 50 };
       }
 
       if (roomCell && !isNaN(roomCell) && row[0] === "") {
@@ -196,12 +196,12 @@ async function exportExcel() {
     });
 
     worksheet["!cols"] = [
-      { wch: 20 },
+      { wch: 18 },
+      { wch: 8 },
+      { wch: 5 },
       { wch: 12 },
-      { wch: 7 },
-      { wch: 12 },
-      { wch: 20 },
-      { wch: 12 },
+      { wch: 30 },
+      { wch: 16 },
     ];
 
     addBorderAllCells(worksheet);
